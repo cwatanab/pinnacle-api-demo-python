@@ -1,0 +1,249 @@
+openapi: 3.0.0
+info:
+    title: Pinnacle Live Height
+    description: This openapi specification for getting Pinnacle height in realtime. 
+    version: v1
+servers:
+    - url: https://api.nextnav.io/plh
+paths:
+    /v1/get-live-height:
+        post:
+            summary: Get pinnacle live heights
+            description: Posts a request for Live Height and returns a reply of height
+            operationId: getPinnacleLiveHeight
+            parameters:
+              - name: x-api-key
+                in: header
+                description: for api authorization
+                required: true
+                schema:
+                    type: string
+              - name: nn-trans-id
+                in: header
+                description: for tracing the api flow in appliation
+                required: false
+                schema:
+                    type: string
+            requestBody:
+                description: pinnacle request payload
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/PLHAltitudeRequest'
+                required: true
+            responses:
+                200:
+                    description: The request is processed sucessfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/PLHAltitudeResponse'
+components:
+    schemas:
+        PLHAltitudeRequest:
+            type: object
+            required:
+                - appId
+                - deviceId
+                - xyLocation
+                - pressure
+                - timestamp
+            properties:
+                appVersion:
+                    type: string
+                    description: User application version.
+                appId:
+                    type: string
+                    description: Application bundle Name/ID or Customer ID.
+                deviceId:
+                    type: string
+                    description: The unique device ID
+                serviceType:
+                    type: string
+                    enum:
+                        - BAROCAL_ONLY
+                        - ALT_BAROCAL
+                        - ALT_ONLY
+                    default: ALT_BAROCAL
+                phoneModel:
+                    type: string
+                    description: The phone model
+                baroModel:
+                    type: string
+                    description: The device baro sensor model
+                xyLocation: 
+                    description: xy 2D location for plh request
+                    $ref: '#/components/schemas/XYLocation'
+                pressure: 
+                    description: The device pressure for plh request
+                    $ref: '#/components/schemas/DevicePressure'
+                batteryTemperature:
+                    type: number
+                    format: double
+                    description: The phone battery temp
+                activity: 
+                    type: array
+                    items:
+                        type: object
+                        $ref: '#/components/schemas/DeviceActivity'
+                timestamp:
+                    type: integer
+                    format: int64
+                    example: 1668993243123
+                    description:  Live/Real-Time Not Historical Time, Unix time milliseconds, UTC
+        PLHAltitudeResponse:
+            type: object
+            required:
+                - status
+            properties:
+                    status:
+                        type: integer
+                        format: enum [200, 400, 600, 610, 620, 630]
+                        example: 200
+                        description: response codes# 200 success, 400 general server error, 600 out of Z service area,610 Inside Coverage/service area but not reference data available,620 Inside coverage/service area but no barocal data, 630 Inside coverage/service but no baro-cal & not reference data.
+                    result:
+                        description: complete response for plh request
+                        $ref: '#/components/schemas/PLHResult'    
+        PLHResult:
+            type: object
+            required:
+                - xyLocation
+                - timestamp
+            properties:
+                xyLocation:  
+                    description: 2D Location and uncertainty
+                    $ref: '#/components/schemas/XYLocation'
+                hae:
+                    description: height above ellipsoid value and uncertainty
+                    $ref: '#/components/schemas/ZHeight'
+                hat:
+                    description: height above terrain value and uncertainty
+                    $ref: '#/components/schemas/ZHeight'
+                barocalNeeded:
+                    type: string
+                    enum: [Y, N]
+                    description: Y= More data needed for Baro Calibration, N= Barocal is current
+                timestamp:
+                    type: integer
+                    format: int64
+                    example: 1621477589234
+                    description: Time of Altitude Calculation in Unix time milliseconds, UTC
+        XYLocation:
+            type: object
+            required:
+                - latitude
+                - longitude
+                - accuracy
+            properties:
+                latitude:
+                    type: number
+                    format: double
+                    multipleOf: 0.0000001
+                    example: 37.1231234
+                    description: location latitude, precision (12,7)
+                longitude:
+                    type: number
+                    format: double
+                    multipleOf: 0.0000001
+                    example: -121.1234123
+                    description: location longitude, precision (12,7)
+                accuracy:
+                    type: number
+                    format: double
+                    multipleOf: 0.01
+                    example: 2.12
+                    description: xy location uncertainty in meters at 68% confidence
+        DevicePressure:
+            type: object
+            required:
+                - average
+                - variance
+                - count
+                - min
+                - max
+            properties:
+                average:
+                    type: number
+                    format: double
+                    multipleOf: 0.01
+                    example: 100101.34
+                    description: phone/sensor average pressure in Pa
+                variance:
+                    type: number
+                    format: double
+                    multipleOf: 0.01
+                    example: 0.27
+                    description: Phone/Sensor Pressure Variance in Pa
+                count:
+                    type: integer
+                    format: int32
+                    example: 20
+                    description: Phone Pressure Count
+                min:
+                    type: number
+                    format: double
+                    multipleOf: 0.01
+                    example: 100012.23
+                    description: The minimal phone pressure in Pascal
+                max:
+                    type: number
+                    format: double
+                    multipleOf: 0.01
+                    example: 100134.54
+                    description: The maximal phone pressure in Pascal
+        ZHeight:
+            type: object
+            properties:
+                value: 
+                    type: number
+                    format: double
+                    multipleOf: 0.1
+                    example: 27.3
+                    description: The vertical height value in meters
+                accuracy:
+                    type: number
+                    format: double
+                    multipleOf: 0.1
+                    example: 2.1
+                    description: The vertical height accuracy with +/-uncertainty in meters @ 68% -- to be obsolete and replaced by accuracy68
+                accuracy68:
+                    type: number
+                    format: double
+                    multipleOf: 0.01
+                    example: 2.12
+                    description: The vertical height accuracy with +/-uncertainty in meters @ 68%
+                accuracy90:
+                    type: number
+                    format: double
+                    multipleOf: 0.01
+                    example: 2.12
+                    description: The vertical height accuracy with +/-uncertainty in meters @ 90
+                accuracy95:
+                    type: number
+                    format: double
+                    multipleOf: 0.01
+                    example: 2.12
+                    description: The vertical height accuracy with +/-uncertainty in meters @ 95
+        DeviceActivity:
+            type: object
+            properties:
+                activity:
+                    type: string
+                    enum:  # combined
+                        - STILL      # android
+                        - STATIONARY # ios
+                        - WALKING   # android|ios
+                        - TILTING    # android
+                        - ON_FOOT    # android
+                        - RUNNING     # android|iphone
+                        - IN_VEHICLE  # android
+                        - AUTOMOBILE  # ios
+                        - ON_BYCYCLE  # android
+                        - CYCLING     # ios 
+                        - UNKNOWN     # android | ios
+                    description: The type of activity that was detected.
+                confidence: 
+                    type: integer
+                    format: int32
+                    example: 80
+                    description: A value from 0 to 100 indicating the likelihood that the user is performing this activity.
